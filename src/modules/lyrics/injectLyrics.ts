@@ -45,7 +45,7 @@ import {
   renderLoader,
   setExtraHeight,
 } from "@modules/ui/dom";
-import { getRelativeBounds, languageMatchesAny, log } from "@utils";
+import { getRelativeBounds, langCodesMatch, languageMatchesAny, log } from "@utils";
 
 let disableRichsync = registerThemeSetting("blyrics-disable-richsync", false, true);
 let lineSyncedAnimationDelay = registerThemeSetting("blyrics-line-synced-animation-delay", 50, true);
@@ -891,14 +891,4 @@ function isSameText(str1: string, str2: string): boolean {
     .trim();
 
   return str1 === str2;
-}
-
-/**
- * Compare base language codes, e.g. "en" matches "en-US"
- */
-function langCodesMatch(lang1: string, lang2: string): boolean {
-  if (!lang1 || !lang2) return false;
-  const base1 = lang1.split("-")[0];
-  const base2 = lang2.split("-")[0];
-  return base1 === base2;
 }
