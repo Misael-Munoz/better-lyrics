@@ -13,6 +13,8 @@ import {
 import { AppState } from "@core/appState";
 import { t } from "@core/i18n";
 import { calculateLyricPositions, type LineData } from "@modules/lyrics/injectLyrics";
+import { updateCurrentTime } from "@modules/popup/popupBridge";
+import { updateOverlayTime } from "@modules/ui/overlay";
 import { registerThemeSetting } from "@modules/settings/themeOptions";
 import { hideAdOverlay, isAdPlaying, isLoaderActive, showAdOverlay } from "@modules/ui/dom";
 import { log } from "@utils";
@@ -294,8 +296,9 @@ function setupTabRendererObserver(element: HTMLElement) {
  * @param [smoothScroll=true] - Whether to use smooth scrolling
  */
 export function animationEngine(currentTime: number, eventCreationTime: number, isPlaying = true, smoothScroll = true) {
+  updateCurrentTime(currentTime);
+  updateOverlayTime(currentTime);
   const now = Date.now();
-  // const frameStart = performance.now();
   if (!AppState.areLyricsTicking || (currentTime === 0 && !isPlaying)) {
     return;
   }

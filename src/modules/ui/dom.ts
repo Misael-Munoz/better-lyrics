@@ -48,6 +48,8 @@ import { getRequest, setRequest } from "@modules/unison/lyricsRequestTracker";
 import { getTrustTier } from "@modules/unison/trustTier";
 import type { UnisonLyricsRequest } from "@modules/unison/types";
 import { requestLyrics } from "@modules/unison/unisonApi";
+import { clearPopupState } from "@modules/popup/popupBridge";
+import { clearOverlay } from "@modules/ui/overlay";
 import { log } from "@utils";
 import { generatePetName } from "@/core/keyIdentity";
 import { byId, deleteVote, type UnisonData, vote } from "../lyrics/providers/unison";
@@ -1275,6 +1277,9 @@ export function cleanup(): void {
     AppState.lyricData.lines = [];
     AppState.lyricData = null;
   }
+
+  clearPopupState();
+  clearOverlay();
 
   const ytMusicLyrics = (document.querySelector(NO_LYRICS_TEXT_SELECTOR) as HTMLElement)?.parentElement;
   if (ytMusicLyrics) {

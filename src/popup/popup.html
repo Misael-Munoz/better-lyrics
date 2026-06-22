@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Better Lyrics</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="popup-root">
+      <div id="popup-header">
+        <div id="popup-song-info">
+          <span id="popup-song-title">Better Lyrics</span>
+          <span id="popup-song-artist"></span>
+        </div>
+        <div id="popup-actions">
+          <button id="popup-open-window" title="Open in window">⛶</button>
+          <button id="popup-open-options" title="Options">⚙</button>
+        </div>
+      </div>
+      <div id="popup-lyrics-container" class="blyrics">
+        <div id="popup-loading">Waiting for lyrics...</div>
+      </div>
+      <div id="popup-status"></div>
+    </div>
+    <script type="module" src="popup.ts"></script>
+  </body>
+</html>

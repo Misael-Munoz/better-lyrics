@@ -16,7 +16,8 @@
   ],
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "windows"
   ],
   "externally_connectable": {
     "matches": [
@@ -29,7 +30,7 @@
   ],
   "optional_host_permissions": [],
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com; font-src 'self' data: https://cdn.fontshare.com https://fonts.gstatic.com; img-src 'self' data: https://blrcunison.vercel.app https://boidu.dev https://betterlyrics.org https://raw.githubusercontent.com https://placehold.co; connect-src https://unison.boidu.dev https://raw.githubusercontent.com https://api.github.com https://better-lyrics-themes-api.boidu.dev; frame-src https://better-lyrics-themes-api.boidu.dev;"
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com; font-src 'self' data: https://cdn.fontshare.com https://fonts.gstatic.com; img-src 'self' data: https://i.ytimg.com https://blrcunison.vercel.app https://boidu.dev https://betterlyrics.org https://raw.githubusercontent.com https://placehold.co; connect-src https://unison.boidu.dev https://raw.githubusercontent.com https://api.github.com https://better-lyrics-themes-api.boidu.dev; frame-src https://better-lyrics-themes-api.boidu.dev;"
   },
   "options_ui": {
     "page": "src/options/options.html",
@@ -113,7 +114,7 @@
     }
   ],
   "action": {
-    "default_popup": "src/options/options.html"
+    "default_popup": "src/popup/popup.html"
   },
   "version_name": "2.3.2"
 }

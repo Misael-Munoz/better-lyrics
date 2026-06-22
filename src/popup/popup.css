@@ -1,0 +1,146 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  min-width: 320px;
+  min-height: 400px;
+  background: var(--blyrics-bg-color, #1a1a2e);
+  color: var(--blyrics-ui-text-color, #e0e0e0);
+  font-size: clamp(12px, 1.8vh + 0.5vw, 18px);
+  overflow: hidden;
+  font-family: var(--blyrics-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+}
+
+#popup-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+}
+
+#popup-root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--blyrics-background-img, none) 50% / cover no-repeat;
+  filter: saturate(var(--blyrics-background-saturate, 2)) brightness(85%) blur(20px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+#popup-root::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: -1;
+  pointer-events: none;
+}
+
+#popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--blyrics-bg-color, #16213e);
+  border-bottom: 1px solid var(--blyrics-footer-border-color, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+}
+
+#popup-song-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#popup-song-title {
+  font-weight: 600;
+  font-size: clamp(13px, 2.5vh, 18px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#popup-song-artist {
+  font-size: clamp(11px, 2vh, 15px);
+  color: var(--blyrics-footer-text-color, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#popup-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#popup-actions button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--blyrics-ui-text-color, #e0e0e0);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+#popup-actions button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#popup-lyrics-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  scroll-behavior: smooth;
+}
+
+#popup-lyrics-container .blyrics--word.blyrics--animating.blyrics--paused::after {
+  transition-duration: 0s, 0s, 0s !important;
+}
+
+#popup-lyrics-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+#popup-lyrics-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#popup-lyrics-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+#popup-loading {
+  color: var(--blyrics-footer-text-color, #888);
+  text-align: center;
+  padding: 40px 0;
+  font-style: italic;
+}
+
+#popup-status {
+  padding: 6px 14px;
+  font-size: clamp(10px, 1.5vh, 13px);
+  color: var(--blyrics-footer-text-color, #888);
+  text-align: center;
+  border-top: 1px solid var(--blyrics-footer-border-color, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}

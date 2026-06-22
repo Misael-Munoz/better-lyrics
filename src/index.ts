@@ -25,6 +25,8 @@ import {
   setupHomepageFullscreenHandler,
   setupWakeLockForFullscreen,
 } from "@modules/ui/observer";
+import { activatePopupBridge } from "@modules/popup/popupBridge";
+import { initOverlay } from "@modules/ui/overlay";
 import { subscribeToCustomStyles } from "@modules/ui/styleInjector";
 import { log, setUpLog } from "@utils";
 
@@ -57,6 +59,8 @@ async function modify(): Promise<void> {
   disableInertWhenFullscreen();
   setupAltHoverHandler();
   initProviders();
+  activatePopupBridge();
+  initOverlay();
   setUpAvButtonListener();
   log(
     INITIALIZE_LOG,

@@ -1,36 +1,45 @@
 import { reloadLyrics } from "@core/appState";
 
-let keyToSettingMap: Map<string, Setting> = new Map();
-
-class Setting {
+interface Setting {
   readonly type: "number" | "boolean" | "string";
   value: number | boolean | string;
   readonly defaultValue: number | boolean | string;
   readonly requiresLyricReload: boolean;
+  getNumberValue(): number;
+  getBooleanValue(): boolean;
+  getStringValue(): string;
+}
 
-  constructor(
-    type: "number" | "boolean" | "string",
-    value: number | boolean | string,
-    defaultValue: number | boolean | string,
-    requiresLyricReload: boolean
-  ) {
-    this.type = type;
-    this.value = value;
-    this.defaultValue = defaultValue;
-    this.requiresLyricReload = requiresLyricReload;
-  }
+function createSetting(
+  type: "number" | "boolean" | "string",
+  value: number | boolean | string,
+  defaultValue: number | boolean | string,
+  requiresLyricReload: boolean
+): Setting {
+  return {
+    type,
+    value,
+    defaultValue,
+    requiresLyricReload,
+    getNumberValue(this: Setting): number {
+      return this.value as number;
+    },
+    getBooleanValue(this: Setting): boolean {
+      return this.value as boolean;
+    },
+    getStringValue(this: Setting): string {
+      return this.value as string;
+    },
+  };
+}
 
-  public getNumberValue(): number {
-    return this.value as number;
+function getSettingsMap(): Map<string, Setting> {
+  let m = (registerThemeSetting as any)._map;
+  if (!m) {
+    m = new Map<string, Setting>();
+    (registerThemeSetting as any)._map = m;
   }
-
-  public getBooleanValue(): boolean {
-    return this.value as boolean;
-  }
-
-  public getStringValue(): string {
-    return this.value as string;
-  }
+  return m;
 }
 
 export function registerThemeSetting(
@@ -42,13 +51,14 @@ export function registerThemeSetting(
   if (type !== "number" && type !== "boolean" && type !== "string") {
     throw new Error("Invalid type for theme setting");
   }
-  let setting = new Setting(type, defaultValue, defaultValue, requiresLyricReload);
-  keyToSettingMap.set(key, setting);
+  let setting = createSetting(type, defaultValue, defaultValue, requiresLyricReload);
+  getSettingsMap().set(key, setting);
   return setting;
 }
 
 export function setThemeSettings(map: Map<string, string>) {
   let needsLyricReload = false;
+  const keyToSettingMap = getSettingsMap();
 
   map.forEach((value, key) => {
     let setting = keyToSettingMap.get(key);

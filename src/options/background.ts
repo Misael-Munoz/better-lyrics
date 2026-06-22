@@ -1,16 +1,7 @@
-/**
- * Handles runtime messages from extension components.
- * Processes style updates for YouTube Music tabs and settings updates.
- *
- * @param {Object} request - The message request object
- * @param {string} request.action - The action type ('applyStyles' or 'updateSettings')
- * @param {string} [request.ricsSource] - RICS source code for applyStyles action
- * @param {Object} [request.settings] - Settings object for updateSettings action
- * @returns {boolean} Returns true to indicate asynchronous response
- */
 import { LOG_PREFIX_BACKGROUND } from "@constants";
 import { getLocalStorage, getSyncStorage } from "@core/storage";
 import { initBackgroundAuth } from "@modules/auth/backgroundAuth";
+import type { Lyric } from "@modules/lyrics/providers/shared";
 import {
   getInstalledStoreThemes,
   installSymlinkedThemeFromMarketplace,
@@ -23,8 +14,6 @@ import { fetchAllStoreThemes } from "./store/themeStoreService";
 const THEME_UPDATE_ALARM = "theme-update-check";
 const UPDATE_INTERVAL_MINUTES = 360; // 6 hours
 
-// -- Symlinked Theme Migration --------------------------
-
 const SYMLINKED_MIGRATION_KEY = "symlinkedMigrationVersion";
 const SYMLINKED_MIGRATION_VERSION = 1;
 
@@ -35,6 +24,46 @@ const SYMLINKED_THEME_MAP: Record<string, string> = {
 };
 
 const SYNC_STORAGE_LIMIT = 7000;
+
+// -- PopUp Bridge State --------------------------------
+
+interface PopupCachedState {
+  lyrics: Lyric[];
+  syncType: "richsync" | "synced" | "none";
+  videoId?: string;
+  song?: string;
+  artist?: string;
+  album?: string;
+  duration?: number;
+  source?: string;
+  sourceHref?: string;
+}
+
+let cachedState: PopupCachedState | null = null;
+let cachedTime = 0;
+const popupPorts = new Set<chrome.runtime.Port>();
+
+function broadcastToPorts(msg: unknown): void {
+  for (const port of popupPorts) {
+    try {
+      port.postMessage(msg);
+    } catch {
+      popupPorts.delete(port);
+    }
+  }
+}
+
+function forwardToContentScript(action: string, payload: unknown): void {
+  chrome.tabs.query({ url: "*://music.youtube.com/*" }, tabs => {
+    for (const tab of tabs) {
+      if (tab.id != null) {
+        chrome.tabs.sendMessage(tab.id, { action, payload }).catch(() => {});
+      }
+    }
+  });
+}
+
+// -- Theme Management ----------------------------------
 
 async function saveThemeCSS(css: string, title: string, creators: string[]): Promise<void> {
   const themeContent = `/* ${title}, a marketplace theme by ${creators.join(", ")} */\n\n${css}\n`;
@@ -129,7 +158,27 @@ chrome.alarms.onAlarm.addListener(alarm => {
   }
 });
 
-chrome.runtime.onMessage.addListener(request => {
+// -- PopUp Bridge Messaging ----------------------------
+
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name === "blyrics:popup") {
+    popupPorts.add(port);
+
+    // Send initial state immediately
+    port.postMessage({
+      type: "blyrics:state",
+      state: cachedState,
+      currentTime: cachedTime,
+    });
+
+    port.onDisconnect.addListener(() => {
+      popupPorts.delete(port);
+    });
+  }
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Handle "applyStyles" (existing)
   if (request.action === "applyStyles") {
     chrome.tabs.query({ url: "*://music.youtube.com/*" }, tabs => {
       tabs.forEach(tab => {
@@ -140,8 +189,60 @@ chrome.runtime.onMessage.addListener(request => {
         }
       });
     });
+    return true;
   }
-  return true;
+
+  // PopUp Bridge messages
+  if (request.action === "blyrics:state" && request.payload) {
+    cachedState = {
+      lyrics: request.payload.lyrics,
+      syncType: request.payload.syncType,
+      videoId: request.payload.videoId,
+      song: request.payload.song,
+      artist: request.payload.artist,
+      album: request.payload.album,
+      duration: request.payload.duration,
+      source: request.payload.source,
+      sourceHref: request.payload.sourceHref,
+    };
+    broadcastToPorts({ type: "blyrics:state", state: cachedState, currentTime: cachedTime });
+    return false;
+  }
+
+  if (request.action === "blyrics:tick" && request.payload) {
+    cachedTime = request.payload.currentTime;
+    if (request.payload.state) {
+      cachedState = request.payload.state;
+    }
+    broadcastToPorts({ type: "blyrics:tick", currentTime: cachedTime });
+    return false;
+  }
+
+  if (request.action === "blyrics:cleared") {
+    cachedState = null;
+    cachedTime = 0;
+    broadcastToPorts({ type: "blyrics:cleared" });
+    return false;
+  }
+
+  if (request.action === "blyrics:getState") {
+    sendResponse({ state: cachedState, currentTime: cachedTime });
+    return true;
+  }
+
+  if (request.action === "blyrics:seek" && request.payload) {
+    forwardToContentScript("blyrics:seek", request.payload);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.action === "blyrics:switchToLyricsTab") {
+    forwardToContentScript("blyrics:switchToLyricsTab", null);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  return false;
 });
 
 initBackgroundAuth();
