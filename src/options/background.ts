@@ -43,6 +43,7 @@ let cachedState: PopupCachedState | null = null;
 let cachedTime = 0;
 let cachedPlaying = false;
 const popupPorts = new Set<chrome.runtime.Port>();
+let popupWindowId: number | null = null;
 
 function broadcastToPorts(msg: unknown): void {
   for (const port of popupPorts) {
@@ -161,6 +162,12 @@ chrome.alarms.onAlarm.addListener(alarm => {
 
 // -- PopUp Bridge Messaging ----------------------------
 
+chrome.windows.onRemoved.addListener((windowId: number) => {
+  if (windowId === popupWindowId) {
+    popupWindowId = null;
+  }
+});
+
 chrome.runtime.onConnect.addListener(port => {
   if (port.name === "blyrics:popup") {
     popupPorts.add(port);
@@ -262,7 +269,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "blyrics:openPopupWindow") {
+    (async () => {
+      sendResponse(await findOrCreatePopupWindow());
+    })();
+    return true;
+  }
+
   return false;
 });
+
+async function findOrCreatePopupWindow(): Promise<{ created: boolean; windowId: number }> {
+  const url = chrome.runtime.getURL("action/index.html") + "?standalone";
+
+  if (popupWindowId !== null) {
+    try {
+      const win = await chrome.windows.get(popupWindowId);
+      if (win) {
+        await chrome.windows.update(popupWindowId, { focused: true });
+        return { created: false, windowId: popupWindowId };
+      }
+    } catch {
+      popupWindowId = null;
+    }
+  }
+
+  const windows = await chrome.windows.getAll({ populate: true });
+  for (const win of windows) {
+    if (win.tabs?.some(tab => tab.url?.startsWith(url))) {
+      popupWindowId = win.id ?? null;
+      if (popupWindowId !== null) {
+        await chrome.windows.update(popupWindowId, { focused: true });
+      }
+      return { created: false, windowId: popupWindowId ?? -1 };
+    }
+  }
+
+  const win = await chrome.windows.create({
+    url,
+    type: "popup",
+    width: 420,
+    height: 700,
+  });
+  popupWindowId = win?.id ?? null;
+  return { created: true, windowId: popupWindowId ?? -1 };
+}
 
 initBackgroundAuth();

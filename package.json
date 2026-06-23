@@ -9,7 +9,7 @@
         "dev:firefox": "npm run generate:locales && extension dev --browser firefox --polyfill",
         "dev:brave": "npm run generate:locales && extension dev --chromium-binary \"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser\" --polyfill",
         "start": "npm run generate:locales && extension start --polyfill",
-        "build": "npm run generate:locales && extension build --browser all --polyfill",
+        "build": "npm run generate:locales && extension build --browser all --polyfill && node -e \"const fs=require('fs');['chrome','edge','firefox'].forEach(b=>{try{let p='dist/'+b+'/manifest.json',m=JSON.parse(fs.readFileSync(p,'utf8'));delete m.key;fs.writeFileSync(p,JSON.stringify(m,null,'\\t'))}catch(e){}})\"",
         "build:ci": "npm run generate:locales && tsx tooling/build-and-patch.ts",
         "build:zip": "npm run generate:locales && extension build --browser all --polyfill --zip",
         "build:release": "npm run generate:locales && tsx tooling/build-release-zip.ts",
@@ -48,7 +48,7 @@
         "@plasmohq/edge-addons-api": "^2.0.0",
         "codemirror-lang-rics": "^0.3.21",
         "dompurify": "^3.4.10",
-        "extension": "2.1.3",
+        "extension": "^3.18.4",
         "fast-xml-parser": "^5.8.0",
         "fflate": "^0.8.3",
         "marked": "^18.0.5",
@@ -64,6 +64,7 @@
         "@typescript/lib-dom": "npm:@types/web@^0.0.280",
         "jsdom": "^29.1.1",
         "knip": "^5.88.1",
+        "parse5-utilities": "1.0.2",
         "tsx": "^4.22.4",
         "typescript": "^6.0.3"
     }

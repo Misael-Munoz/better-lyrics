@@ -85,18 +85,24 @@ function updateHighlighting(): void {
   }
 
   lineEls.forEach((el, i) => {
+    const isInstrumental = el.dataset.instrumental === "true";
+
     if (i === activeLineIndex) {
       el.classList.add(CURRENT_LYRICS_CLASS);
+
+      if (isInstrumental) {
+        const timeDelta = currentTime - parseFloat(el.dataset.time || "0");
+        el.style.setProperty("--blyrics-anim-delay", -timeDelta + "s");
+        el.classList.remove(PRE_ANIMATING_CLASS);
+        el.classList.add(ANIMATING_CLASS);
+        el.classList.toggle(PAUSED_CLASS, !isPlaying);
+      }
 
       const words = el.querySelectorAll<HTMLElement>(`.${WORD_CLASS}`);
       words.forEach((word) => {
         const wordTime = parseFloat(word.dataset.time || "0") * 1000;
         const wordDur = parseFloat(word.dataset.duration || "0") * 1000;
         const wordEnd = wordTime + wordDur;
-
-        if (word.classList.contains("blyrics--zero-duration") || wordDur === 0) {
-          return;
-        }
 
         if (currentTime * 1000 >= wordTime && currentTime * 1000 < wordEnd) {
           word.classList.add(ANIMATING_CLASS);
@@ -117,6 +123,19 @@ function updateHighlighting(): void {
       }
     } else {
       el.classList.remove(CURRENT_LYRICS_CLASS);
+
+      if (isInstrumental) {
+        if (i === activeLineIndex + 1) {
+          el.style.setProperty("--blyrics-anim-delay", "0s");
+          el.classList.remove(ANIMATING_CLASS, PAUSED_CLASS);
+          el.classList.add(PRE_ANIMATING_CLASS);
+        } else {
+          el.classList.remove(ANIMATING_CLASS, PRE_ANIMATING_CLASS, PAUSED_CLASS);
+          el.style.removeProperty("--blyrics-anim-delay");
+          el.style.removeProperty("--blyrics-swipe-delay");
+        }
+      }
+
       const words = el.querySelectorAll<HTMLElement>(`.${WORD_CLASS}`);
       words.forEach((word) => {
         word.classList.remove(ANIMATING_CLASS, PRE_ANIMATING_CLASS, PAUSED_CLASS);
@@ -141,6 +160,7 @@ function updateControls(): void {
 }
 
 function connectToBackground(): void {
+  if (port) return;
   try {
     port = chrome.runtime.connect({ name: "blyrics:popup" });
 
@@ -197,10 +217,15 @@ function connectToBackground(): void {
 
     port.onDisconnect.addListener(() => {
       port = null;
-      updateStatus("Disconnected");
+      updateStatus("Disconnected. Reconnecting...");
+      setTimeout(() => {
+        connectToBackground();
+        requestInitialState();
+      }, 1500);
     });
   } catch (err) {
     updateStatus(`Connect error: ${err}`);
+    setTimeout(() => connectToBackground(), 3000);
   }
 }
 
@@ -315,14 +340,32 @@ async function loadLyricsBaseCSS(): Promise<void> {
   }
 }
 
+async function loadInstrumentalCSS(): Promise<void> {
+  try {
+    const id = "blyrics-popup-instrumental";
+    if (document.getElementById(id)) return;
+    const url = chrome.runtime.getURL("css/blyrics/instrumental.css");
+    const resp = await fetch(url);
+    const css = await resp.text();
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = css;
+    document.head.appendChild(style);
+  } catch (err) {
+    console.warn("[BetterLyrics] Failed to load instrumental CSS:", err);
+  }
+}
+
 // --- Buttons ---
 
 document.getElementById("popup-open-window")?.addEventListener("click", () => {
-  chrome.windows.create({
-    url: chrome.runtime.getURL("action/default_popup.html"),
-    type: "popup",
-    width: 420,
-    height: 700,
+  chrome.runtime.sendMessage({ action: "blyrics:openPopupWindow" }).catch(() => {
+    chrome.windows.create({
+      url: chrome.runtime.getURL("action/index.html"),
+      type: "popup",
+      width: 420,
+      height: 700,
+    });
   });
 });
 
@@ -357,21 +400,19 @@ const isStandalone = window.location.search.includes("standalone");
 
 if (!isStandalone) {
   console.log("[BetterLyrics] Elevating popup to standalone window...");
-  chrome.windows.create(
-    {
-      url: chrome.runtime.getURL("action/default_popup.html") + "?standalone",
+  chrome.runtime.sendMessage({ action: "blyrics:openPopupWindow" }).catch(() => {
+    chrome.windows.create({
+      url: chrome.runtime.getURL("action/index.html") + "?standalone",
       type: "popup",
       width: 420,
       height: 700,
-    },
-    () => {
-      window.close();
-    },
-  );
+    });
+  });
+  window.close();
 } else {
   (async () => {
     console.log("[BetterLyrics] Popup starting...");
-    await Promise.all([loadPopupTheme(), loadLyricsBaseCSS(), loadVariablesCSS()]);
+    await Promise.all([loadPopupTheme(), loadLyricsBaseCSS(), loadInstrumentalCSS(), loadVariablesCSS()]);
     const overrideStyle = document.createElement("style");
     overrideStyle.id = "blyrics-popup-font-override";
     overrideStyle.textContent = `:root { --blyrics-font-size: clamp(14px, 4vh, 26px); }`;

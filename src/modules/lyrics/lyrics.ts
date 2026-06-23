@@ -123,8 +123,8 @@ export async function createLyrics(detail: PlayerDetails, signal: AbortSignal): 
     }
 
     if (matchingSong) {
-      song = matchingSong.title;
-      artist = matchingSong.artist;
+      if (matchingSong.title) song = matchingSong.title;
+      if (matchingSong.artist) artist = matchingSong.artist;
 
       if (isMusicVideo && matchingSong.counterpartVideoId && matchingSong.segmentMap) {
         log("Switching VideoId to Audio Id");
@@ -336,8 +336,8 @@ export async function preFetchLyrics(
   let swappedVideoId = false;
 
   if (matchingSong) {
-    song = matchingSong.title;
-    artist = matchingSong.artist;
+    if (matchingSong.title) song = matchingSong.title;
+    if (matchingSong.artist) artist = matchingSong.artist;
 
     if (isMusicVideo && matchingSong.counterpartVideoId && matchingSong.segmentMap) {
       swappedVideoId = true;

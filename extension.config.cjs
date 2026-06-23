@@ -2,10 +2,6 @@ module.exports = {
   dev: {
     browser: "chrome",
   },
-  config: (config) => {
-    config.devtool = "source-map";
-    return config;
-  },
   browser: {
     chrome: {
       preferences: { theme: "dark" },
@@ -36,6 +32,7 @@ module.exports = {
   config: (config) => {
     const isCanaryRelease = process.env.RELEASE_TYPE === "canary";
     const isDevelopment = config.mode !== "production";
+    const isReleaseBuild = !!process.env.RELEASE_TYPE;
 
     if (!isDevelopment) {
       console.log("\x1b[31m[BetterLyrics]\x1b[0m Building for", isCanaryRelease ? "canary release" : "standard release");
@@ -58,11 +55,40 @@ module.exports = {
         },
       });
     }
+
+    // Strip the `key` field from manifest for local dev/test builds
+    // so Chrome assigns a random extension ID (avoids ID mismatch with publicPath).
+    // Release builds (RELEASE_TYPE=canary or =release) keep the key for the store.
+    if (!isReleaseBuild) {
+      config.plugins.push({
+        apply: (compiler) => {
+          compiler.hooks.emit.tap("StripManifestKey", (compilation) => {
+            const manifest = compilation.assets["manifest.json"];
+            if (manifest) {
+              const source = manifest.source();
+              const json = JSON.parse(source);
+              delete json.key;
+              const newSource = JSON.stringify(json, null, "\t");
+              compilation.assets["manifest.json"] = {
+                source: () => newSource,
+                size: () => newSource.length,
+              };
+            }
+          });
+        },
+      });
+    }
+
     config.devtool = (isDevelopment || isCanaryRelease) ? "source-map" : false;
-    config.output = {
-      ...config.output,
-      publicPath: "chrome-extension://effdbpeggelllpfkjppbokhmmiinhlmg/",
-    };
+
+    if (isReleaseBuild) {
+      // Production builds use the CWS store extension ID for webpack chunk paths
+      config.output = {
+        ...config.output,
+        publicPath: "chrome-extension://effdbpeggelllpfkjppbokhmmiinhlmg/",
+      };
+    }
+
     return config;
   }
 };
