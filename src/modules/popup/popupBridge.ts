@@ -12,12 +12,14 @@ export interface PopupState {
   duration?: number;
   source?: string;
   sourceHref?: string;
+  isPlaying?: boolean;
 }
 
 let currentTime = 0;
 let currentPopupState: PopupState | null = null;
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 let isActive = false;
+let isPlaying = false;
 
 function sendToBackground(msg: Record<string, unknown>): void {
   try {
@@ -36,8 +38,9 @@ export function updatePopupState(state: PopupState): void {
   }
 }
 
-export function updateCurrentTime(time: number): void {
+export function updateCurrentTime(time: number, playing?: boolean): void {
   currentTime = time;
+  if (typeof playing === "boolean") isPlaying = playing;
 }
 
 export function clearPopupState(): void {
@@ -52,7 +55,7 @@ function onTick(): void {
   if (!isActive || !currentPopupState) return;
   sendToBackground({
     action: "blyrics:tick",
-    payload: { currentTime, state: currentPopupState },
+    payload: { currentTime, state: currentPopupState, isPlaying },
   });
 }
 
@@ -90,7 +93,23 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     sendResponse({
       state: currentPopupState,
       currentTime,
+      isPlaying,
     });
+    return true;
+  }
+  if (request.action === "blyrics:togglePlay") {
+    document.dispatchEvent(new CustomEvent("blyrics-toggle-play"));
+    sendResponse({ success: true });
+    return true;
+  }
+  if (request.action === "blyrics:nextSong") {
+    document.dispatchEvent(new CustomEvent("blyrics-next-song"));
+    sendResponse({ success: true });
+    return true;
+  }
+  if (request.action === "blyrics:previousSong") {
+    document.dispatchEvent(new CustomEvent("blyrics-previous-song"));
+    sendResponse({ success: true });
     return true;
   }
   return undefined;

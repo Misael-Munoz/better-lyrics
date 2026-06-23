@@ -296,7 +296,7 @@ function setupTabRendererObserver(element: HTMLElement) {
  * @param [smoothScroll=true] - Whether to use smooth scrolling
  */
 export function animationEngine(currentTime: number, eventCreationTime: number, isPlaying = true, smoothScroll = true) {
-  updateCurrentTime(currentTime);
+  updateCurrentTime(currentTime, isPlaying);
   updateOverlayTime(currentTime);
   const now = Date.now();
   if (!AppState.areLyricsTicking || (currentTime === 0 && !isPlaying)) {

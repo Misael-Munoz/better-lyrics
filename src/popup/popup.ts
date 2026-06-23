@@ -16,8 +16,11 @@ let port: chrome.runtime.Port | null = null;
 let lyrics: Lyric[] = [];
 let syncType: "richsync" | "synced" | "none" = "none";
 let currentTime = 0;
+let duration = 0;
+let isPlaying = false;
 let rafId: number | null = null;
 let lyricsContainer: HTMLElement | null = null;
+let lastActiveLineIndex = -1;
 
 const container = document.getElementById("popup-lyrics-container")!;
 const loadingEl = document.getElementById("popup-loading")!;
@@ -25,6 +28,11 @@ const songTitle = document.getElementById("popup-song-title")!;
 const songArtist = document.getElementById("popup-song-artist")!;
 const statusEl = document.getElementById("popup-status")!;
 const root = document.getElementById("popup-root")!;
+const playBtn = document.getElementById("popup-btn-play-pause")!;
+const timeCurrent = document.getElementById("popup-time-current")!;
+const timeTotal = document.getElementById("popup-time-total")!;
+const progressFill = document.getElementById("popup-progress-fill")!;
+const progressBar = document.getElementById("popup-progress-bar")!;
 
 function updateStatus(msg: string): void {
   statusEl.textContent = msg;
@@ -103,7 +111,10 @@ function updateHighlighting(): void {
         }
       });
 
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (i !== lastActiveLineIndex) {
+        lastActiveLineIndex = i;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     } else {
       el.classList.remove(CURRENT_LYRICS_CLASS);
       const words = el.querySelectorAll<HTMLElement>(`.${WORD_CLASS}`);
@@ -112,6 +123,21 @@ function updateHighlighting(): void {
       });
     }
   });
+}
+
+function formatTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function updateControls(): void {
+  if (!playBtn || !timeCurrent || !timeTotal || !progressFill) return;
+  playBtn.textContent = isPlaying ? "⏸" : "▶";
+  timeCurrent.textContent = formatTime(currentTime);
+  timeTotal.textContent = formatTime(duration);
+  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  progressFill.style.width = `${Math.min(pct, 100)}%`;
 }
 
 function connectToBackground(): void {
@@ -127,6 +153,7 @@ function connectToBackground(): void {
             song?: string;
             artist?: string;
             videoId?: string;
+            duration?: number;
           };
           if (s.lyrics && s.lyrics.length > 0) {
             lyrics = s.lyrics;
@@ -137,13 +164,22 @@ function connectToBackground(): void {
           if (s.videoId) {
             root.style.setProperty("--blyrics-background-img", `url('https://i.ytimg.com/vi/${s.videoId}/hqdefault.jpg')`);
           }
+          if (typeof s.duration === "number") {
+            duration = s.duration;
+          }
           if (typeof msg.currentTime === "number") {
             currentTime = msg.currentTime;
+          }
+          if (typeof msg.isPlaying === "boolean") {
+            isPlaying = msg.isPlaying;
           }
         }
 
         if (msg.type === "blyrics:tick" && typeof msg.currentTime === "number") {
           currentTime = msg.currentTime;
+          if (typeof msg.isPlaying === "boolean") {
+            isPlaying = msg.isPlaying;
+          }
         }
 
         if (msg.type === "blyrics:cleared") {
@@ -182,12 +218,23 @@ function requestInitialState(): void {
       if (response.state.videoId) {
         root.style.setProperty("--blyrics-background-img", `url('https://i.ytimg.com/vi/${response.state.videoId}/hqdefault.jpg')`);
       }
+      if (typeof response.state.duration === "number") {
+        duration = response.state.duration;
+      }
+      if (typeof response.isPlaying === "boolean") {
+        isPlaying = response.isPlaying;
+      }
     }
   });
 }
 
 function animationLoop(): void {
-  updateHighlighting();
+  try {
+    updateHighlighting();
+    updateControls();
+  } catch (err) {
+    console.warn("[BetterLyrics] Animation loop error:", err);
+  }
   rafId = requestAnimationFrame(animationLoop);
 }
 
@@ -281,6 +328,27 @@ document.getElementById("popup-open-window")?.addEventListener("click", () => {
 
 document.getElementById("popup-open-options")?.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
+});
+
+// --- Media controls ---
+
+document.getElementById("popup-btn-previous")?.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "blyrics:previousSong" }).catch(() => {});
+});
+
+document.getElementById("popup-btn-play-pause")?.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "blyrics:togglePlay" }).catch(() => {});
+});
+
+document.getElementById("popup-btn-next")?.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "blyrics:nextSong" }).catch(() => {});
+});
+
+progressBar?.addEventListener("click", (e) => {
+  const rect = progressBar.getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  const seekTime = ratio * duration;
+  chrome.runtime.sendMessage({ action: "blyrics:seek", payload: { time: seekTime } }).catch(() => {});
 });
 
 // --- Init ---

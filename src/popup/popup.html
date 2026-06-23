@@ -21,6 +21,18 @@
       <div id="popup-lyrics-container" class="blyrics">
         <div id="popup-loading">Waiting for lyrics...</div>
       </div>
+      <div id="popup-controls">
+        <div id="popup-buttons">
+          <button id="popup-btn-previous" title="Previous">⏮</button>
+          <button id="popup-btn-play-pause" title="Play/Pause">▶</button>
+          <button id="popup-btn-next" title="Next">⏭</button>
+        </div>
+        <div id="popup-progress">
+          <span id="popup-time-current">0:00</span>
+          <div id="popup-progress-bar"><div id="popup-progress-fill"></div></div>
+          <span id="popup-time-total">0:00</span>
+        </div>
+      </div>
       <div id="popup-status"></div>
     </div>
     <script type="module" src="popup.ts"></script>

@@ -214,4 +214,25 @@ document.addEventListener("blyrics-seek-to", event => {
   }
 });
 
+document.addEventListener("blyrics-toggle-play", () => {
+  const player = document.getElementById("movie_player");
+  if (!player) return;
+  const { isPlaying } = player.getPlayerStateObject();
+  if (isPlaying) {
+    player.pauseVideo();
+  } else {
+    player.playVideo();
+  }
+});
+
+document.addEventListener("blyrics-next-song", () => {
+  const player = document.getElementById("movie_player");
+  if (player) player.nextVideo();
+});
+
+document.addEventListener("blyrics-previous-song", () => {
+  const player = document.getElementById("movie_player");
+  if (player) player.previousVideo();
+});
+
 startLyricsTick();

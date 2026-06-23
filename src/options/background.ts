@@ -41,6 +41,7 @@ interface PopupCachedState {
 
 let cachedState: PopupCachedState | null = null;
 let cachedTime = 0;
+let cachedPlaying = false;
 const popupPorts = new Set<chrome.runtime.Port>();
 
 function broadcastToPorts(msg: unknown): void {
@@ -211,10 +212,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "blyrics:tick" && request.payload) {
     cachedTime = request.payload.currentTime;
+    cachedPlaying = typeof request.payload.isPlaying === "boolean" ? request.payload.isPlaying : cachedPlaying;
     if (request.payload.state) {
       cachedState = request.payload.state;
     }
-    broadcastToPorts({ type: "blyrics:tick", currentTime: cachedTime });
+    broadcastToPorts({ type: "blyrics:tick", currentTime: cachedTime, isPlaying: cachedPlaying });
     return false;
   }
 
@@ -226,7 +228,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "blyrics:getState") {
-    sendResponse({ state: cachedState, currentTime: cachedTime });
+    sendResponse({ state: cachedState, currentTime: cachedTime, isPlaying: cachedPlaying });
     return true;
   }
 
@@ -238,6 +240,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "blyrics:switchToLyricsTab") {
     forwardToContentScript("blyrics:switchToLyricsTab", null);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.action === "blyrics:togglePlay") {
+    forwardToContentScript("blyrics:togglePlay", null);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.action === "blyrics:nextSong") {
+    forwardToContentScript("blyrics:nextSong", null);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.action === "blyrics:previousSong") {
+    forwardToContentScript("blyrics:previousSong", null);
     sendResponse({ success: true });
     return true;
   }
